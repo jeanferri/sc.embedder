@@ -2,6 +2,7 @@
 from plone.app.testing import setRoles
 from plone.app.testing import TEST_USER_ID
 from plone.namedfile.file import NamedBlobImage
+from Products.statusmessages.interfaces import IStatusMessage
 from sc.embedder.content.embedder import Embedder
 from sc.embedder.content.embedder import IEmbedder
 from sc.embedder.testing import INTEGRATION_TESTING
@@ -288,6 +289,36 @@ class MultimediaTestCase(unittest.TestCase):
                                u'title': u'Oceans clip'
                                },
                               json.loads(video.unrestrictedTraverse('@@tinymce-jsondetails')()))
+
+    def test_unauthorized_request(self):
+        add_view = self.folder.unrestrictedTraverse('++add++sc.embedder')
+        add_form = add_view.form_instance
+        add_form.update()
+        add_form.actions.update()
+
+        add_form.widgets['url'].value = 'https://www.youtube.com/watch?v=cwWzpkgwWuU'
+        action = add_form.actions['load']
+        add_form.handleLoad(add_form, action)  # trigger load action
+
+        msg = IStatusMessage(self.request).show()
+        self.assertEqual(len(msg), 1)
+        expected = u'Unauthorized request'
+        self.assertEqual(msg[0].message, expected)
+
+    def test_url_not_found(self):
+        add_view = self.folder.unrestrictedTraverse('++add++sc.embedder')
+        add_form = add_view.form_instance
+        add_form.update()
+        add_form.actions.update()
+
+        add_form.widgets['url'].value = 'https://www.youtube.com/watch?v=fpDw3s7XJKo'
+        action = add_form.actions['load']
+        add_form.handleLoad(add_form, action)  # trigger load action
+
+        msg = IStatusMessage(self.request).show()
+        self.assertEqual(len(msg), 1)
+        expected = u'URL not found'
+        self.assertEqual(msg[0].message, expected)
 
     def test_jsonimagefolderlisting(self):
         # Now we can get a listing of the images and check if our image is there.e/'})
